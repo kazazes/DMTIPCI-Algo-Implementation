@@ -1,0 +1,75 @@
+[ DMTIPCI Algorithm Demonstration ]
+
+System requirement: Python 3
+Entry point:        shell.py
+Version:            v20140912
+
+
+== Usage Guide ==
+
+This demonstration program is written as an interactive shell at command line. At Mac OS X Terminal, make sure Python 3 is installed to /usr/local/bin/python3 (to make this happen, install Python from the official Python Mac OS X dmg installation medium), change to the directory containing shell.py, and type ./shell.py to start.
+
+When shell.py runs, it'll parse the dictionary (pg29765.txt, MWUD2000 from Gutenberg) and run some statistics. This takes no more than a couple of seconds and the results will be cached.
+
+Then simple guide will be printed. Following the guide, just type any (single) word to query, or press enter without a word to quit.
+
+Below is some sample output:
+
+(DMTIPCI) apple
+[ APPLE n. ]
+ · FRUIT 9
+ · CRAB 9
+ · TREE 9
+ · FRUIT 11
+ · ROUND 6
+ · BEAR 46
+[ APPLE vi. ]
+ · LIKE 4
+
+(DMTIPCI) tree
+[ TREE n. ]
+ · PLANT 9
+ · APPLE 14
+ · STOCK 12
+ · PIECE 11
+ · CROSS 8
+ · WOOD 12
+ · WOOD 132
+[ TREE n. ]
+ · DRIVE 5
+ · PLACE 7
+
+Basically, a mid-dot (·) indicates a line of definition in the dictionary. For each definition, the program follows step 100 and 101 in the patent to lookup 'first predicate'. Although multiple 'predicates' can be found, the program currently displays only one. The number after the word behaves as 'weight'. It means how many words in 'predicate word definition' have exact matches in the target word definition.
+
+If a word contains multiple POS, or meanings, they are listed separately in square brackets ([]).
+
+It works for verbs and adjectives as well.
+
+
+== Implementation ==
+
+The current implementation is self contained, and it doesn't rely on a POS tagger. For any input word, the program:
+
+1. look it up in the dictionary to find its possible POS (noun? verb?)
+2. by keeping the original definition sentence in raw sequence, it looks for words with same POS (i.e. it looks for a noun in the sentence to match a noun lookup word), the first word is picked as potential 'predicate'
+3. calculates how many words in the predicate definition matches the current definition (weights)
+4. re-order all words in the current definition by rank of (weights)
+5. output the first one
+
+In the implementation, the program mainly use:
+
+- a inflection map to solve issues such as plural, verb form is currently partially solved
+- word count in the entire dictionary
+- common word cutoffs (see Dictionary.updateWordFrequency for more info)
+- a sequence unigram to count words during predicate lookups
+
+
+== Caveats ==
+
+1. The program currently only looks up word for 1-level, it is possible to do multi-levels later on
+2. POS for input word is unknown, the 'inflection map' in the implementation is rather a smart way to approximate, it's not good to determine whether 'SAW' is really the verb past tense of 'SEE', or the tool we use to cut wood.
+3. Ambiguities caused by 2) are seen during query too. For instance, botanically speaking, POME might be a better word for APPLE rather than 'FRUIT'. The order of potential predicates are determined by the sentence structure in the dictionary. It varies from one to another. There are no other criteria to determine 'a better choice'
+4. In a dictionary, it's common a single word can have multiple definitions. Even for 'APPLE' as noun, it has 6 definitions (obviously some of them can be ruled out in human's view, but by 6, I meant the number of line breaks in the dictionary raw text). As a result, the program outputs 6 predicates, and that's only 1 per-definition, and 1-level of lookup. It's currently unclear whether some of the results should be ruled out.
+5. Dictionary contains full of surprises. In the case of 'APPLE', it's surprising that it can also be used as a verb. Because the POS of the input might be unclear, a query can typically yield 'low possibility results'.
+6. The algorithm works somewhat better for shorter definitions compared to longer ones. In the 6th definition of 'APPLE', for some reason the algorithm choose 'BEAR'. This is another kind of ambiguities that the word used repeatedly is used as a verb, but during lookup procedure, it's discovered the word can also be used as a noun, therefore it's considered a noun.
+7. Other NLP techniques such as statistics based on bigrams or even trigram may be helpful. The results can be improved. It'll require research, trial and error.
